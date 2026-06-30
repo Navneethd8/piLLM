@@ -1,0 +1,18 @@
+{
+  "dolma_version": "v1_7",
+  "manifest": "train_100m_v17.txt",
+  "target_model": "100M",
+  "expected_tokens_after_tokenize": "0.5B-1.5B",
+  "shard_count": 25,
+  "estimated_size_gb": 63.2,
+  "sources": {
+    "wiki": "all (2)",
+    "books": "all (3)",
+    "pes2o": 5,
+    "c4-filtered": 10,
+    "cc_en_head": 5,
+    "starcoder": 0
+  },
+  "note": "Reduced from 121-shard/315GB 124M slice. starcoder skipped; pes2o/cc/c4 capped.",
+  "created": "2026-06-28"
+}
