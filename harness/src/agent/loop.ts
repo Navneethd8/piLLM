@@ -1,7 +1,8 @@
 import type { HarnessConfig } from "../config.js";
 import { buildSystemPrompt } from "./prompt.js";
-import { BUILTIN_TOOLS, getToolMap } from "./tools/index.js";
-import { appendMemory, readSkill, writeSkill } from "../memory/files.js";
+import { getAgentTools } from "./tools/registry.js";
+import { getToolMap } from "./tools/index.js";
+import { appendMemory } from "../memory/files.js";
 import { ProviderRouter } from "../providers/router.js";
 import type { ChatMessage, ToolCall } from "../providers/types.js";
 import { SessionStore } from "../sessions/db.js";
@@ -12,6 +13,7 @@ export interface RunTurnOptions {
   platform?: string;
   history?: ChatMessage[];
   persist?: boolean;
+  skipUserAppend?: boolean;
 }
 
 export interface RunTurnResult {
@@ -41,11 +43,14 @@ function toAssistantToolMessage(response: { content: string | null; toolCalls: T
 
 export class AgentLoop {
   private router: ProviderRouter;
-  private tools = getToolMap(BUILTIN_TOOLS);
+  private tools: ReturnType<typeof getToolMap>;
+  private agentTools: ReturnType<typeof getAgentTools>;
   private sessions: SessionStore;
 
   constructor(private config: HarnessConfig) {
     this.router = new ProviderRouter(config);
+    this.agentTools = getAgentTools(config);
+    this.tools = getToolMap(this.agentTools);
     this.sessions = new SessionStore(config.home);
   }
 
@@ -56,13 +61,14 @@ export class AgentLoop {
       opts.history ??
       (opts.persist !== false ? this.sessions.getMessages(opts.sessionId) : []);
 
+    const skipUser = opts.skipUserAppend === true;
     const messages: ChatMessage[] = [
       { role: "system", content: system },
       ...history.filter((m) => m.role !== "system"),
-      { role: "user", content: opts.userText },
+      ...(skipUser ? [] : [{ role: "user" as const, content: opts.userText }]),
     ];
 
-    if (opts.persist !== false) {
+    if (opts.persist !== false && !skipUser) {
       this.sessions.appendMessage(opts.sessionId, {
         role: "user",
         content: opts.userText,
@@ -77,7 +83,7 @@ export class AgentLoop {
 
       const response = await provider.chat({
         messages,
-        tools: BUILTIN_TOOLS.map((t) => t.definition),
+        tools: this.agentTools.map((t) => t.definition),
         maxTokens: this.config.maxTokens,
       });
 
@@ -122,18 +128,9 @@ export class AgentLoop {
   }
 
   private async dispatchTool(call: ToolCall): Promise<{ output: string; isError?: boolean }> {
-    if (call.name === "skill_manage") {
-      return this.handleSkillManage(call.arguments);
-    }
     if (call.name === "memory_append") {
       appendMemory(this.config.home, String(call.arguments.note ?? ""));
       return { output: "Memory note appended for next session." };
-    }
-    if (call.name === "skill_read") {
-      const content = readSkill(this.config.home, String(call.arguments.path ?? ""));
-      return content
-        ? { output: content }
-        : { output: "Skill not found", isError: true };
     }
 
     const tool = this.tools.get(call.name);
@@ -141,17 +138,6 @@ export class AgentLoop {
       return { output: `Unknown tool: ${call.name}`, isError: true };
     }
     return tool.run(call.arguments, { workspace: this.config.workspace });
-  }
-
-  private handleSkillManage(args: Record<string, unknown>): { output: string; isError?: boolean } {
-    const category = String(args.category ?? "general");
-    const name = String(args.name ?? "untitled");
-    const content = String(args.content ?? "");
-    if (!content.trim()) {
-      return { output: "content required", isError: true };
-    }
-    const path = writeSkill(this.config.home, category, name, content);
-    return { output: `Skill written: ${path}` };
   }
 
   getSessionStore(): SessionStore {

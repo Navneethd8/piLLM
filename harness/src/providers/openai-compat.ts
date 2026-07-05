@@ -27,6 +27,7 @@ export class OpenAiCompatProvider implements Provider {
     private baseUrl: string,
     private model: string,
     private apiKey?: string,
+    private timeoutMs = 600_000,
   ) {}
 
   async healthCheck(): Promise<boolean> {
@@ -66,7 +67,7 @@ export class OpenAiCompatProvider implements Provider {
         ...this.headers(),
       },
       body: JSON.stringify(body),
-      signal: AbortSignal.timeout(120_000),
+      signal: AbortSignal.timeout(this.timeoutMs),
     });
 
     if (!res.ok) {
@@ -98,19 +99,19 @@ export class OpenAiCompatProvider implements Provider {
 }
 
 export class OllamaProvider extends OpenAiCompatProvider {
-  constructor(baseUrl: string, model: string) {
-    super("ollama", `${baseUrl.replace(/\/$/, "")}/v1`, model);
+  constructor(baseUrl: string, model: string, timeoutMs?: number) {
+    super("ollama", `${baseUrl.replace(/\/$/, "")}/v1`, model, undefined, timeoutMs);
   }
 }
 
 export class LlamaServerProvider extends OpenAiCompatProvider {
-  constructor(baseUrl: string, model: string) {
-    super("llama-server", baseUrl, model);
+  constructor(baseUrl: string, model: string, timeoutMs?: number) {
+    super("llama-server", baseUrl, model, undefined, timeoutMs);
   }
 }
 
 export class CloudProvider extends OpenAiCompatProvider {
-  constructor(baseUrl: string, model: string, apiKey: string) {
-    super("cloud", baseUrl, model, apiKey);
+  constructor(baseUrl: string, model: string, apiKey: string, timeoutMs?: number) {
+    super("cloud", baseUrl, model, apiKey, timeoutMs);
   }
 }

@@ -25,6 +25,13 @@ export interface HarnessConfig {
   discordBotToken: string | undefined;
   discordAllowedGuildIds: string[];
   discordAllowedUserIds: string[];
+  discordAutoThread: boolean;
+  discordThreadRequireMention: boolean;
+  discordNoThreadChannels: string[];
+  skillsEnabled: boolean;
+  maxSkills: number;
+  maxSkillBytes: number;
+  inferenceTimeoutMs: number;
 }
 
 function envInt(name: string, fallback: number): number {
@@ -74,6 +81,13 @@ export function loadConfig(): HarnessConfig {
     discordBotToken: process.env.DISCORD_BOT_TOKEN,
     discordAllowedGuildIds: envList("DISCORD_ALLOWED_GUILD_IDS"),
     discordAllowedUserIds: envList("DISCORD_ALLOWED_USER_IDS"),
+    discordAutoThread: process.env.DISCORD_AUTO_THREAD !== "0",
+    discordThreadRequireMention: process.env.DISCORD_THREAD_REQUIRE_MENTION === "1",
+    discordNoThreadChannels: envList("DISCORD_NO_THREAD_CHANNELS"),
+    skillsEnabled: process.env.PILLM_SKILLS === "1",
+    maxSkills: envInt("PILLM_MAX_SKILLS", 20),
+    maxSkillBytes: envInt("PILLM_MAX_SKILL_BYTES", 4096),
+    inferenceTimeoutMs: envInt("PILLM_INFERENCE_TIMEOUT_MS", 600_000),
   };
 }
 

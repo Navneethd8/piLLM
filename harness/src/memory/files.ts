@@ -38,10 +38,11 @@ export function loadUser(home: string): string {
   return raw.slice(0, USER_MAX);
 }
 
-export function listSkillIndex(home: string): string {
+export function listSkillIndex(home: string, max = 20): { index: string; total: number } {
   const skillsDir = join(home, "skills");
-  if (!existsSync(skillsDir)) return "(no skills yet)";
-  const lines: string[] = [];
+  if (!existsSync(skillsDir)) return { index: "(no skills yet)", total: 0 };
+
+  const entries: Array<{ key: string; desc: string }> = [];
   for (const category of readdirSync(skillsDir, { withFileTypes: true })) {
     if (!category.isDirectory()) continue;
     const catPath = join(skillsDir, category.name);
@@ -49,11 +50,38 @@ export function listSkillIndex(home: string): string {
       if (!skill.isDirectory()) continue;
       const skillPath = join(catPath, skill.name, "SKILL.md");
       if (!existsSync(skillPath)) continue;
-      const firstLine = readFileSync(skillPath, "utf8").split("\n")[0] ?? skill.name;
-      lines.push(`- ${category.name}/${skill.name}: ${firstLine.replace(/^#\s*/, "")}`);
+      const raw = readFileSync(skillPath, "utf8");
+      entries.push({
+        key: `${category.name}/${skill.name}`,
+        desc: skillDescription(raw, skill.name),
+      });
     }
   }
-  return lines.length ? lines.join("\n") : "(no skills yet)";
+
+  if (!entries.length) return { index: "(no skills yet)", total: 0 };
+
+  entries.sort((a, b) => a.key.localeCompare(b.key));
+  const lines = entries.slice(0, max).map((e) => `- ${e.key}: ${e.desc}`);
+  if (entries.length > max) {
+    lines.push(`(+${entries.length - max} more — use skill_read with category/name)`);
+  }
+  return { index: lines.join("\n"), total: entries.length };
+}
+
+function skillDescription(raw: string, fallback: string): string {
+  const descMatch = raw.match(/^description:\s*(.+)$/m);
+  if (descMatch) return descMatch[1]!.trim().slice(0, 60);
+  const heading = raw.split("\n").find((l) => l.startsWith("# "));
+  if (heading) return heading.replace(/^#\s*/, "").slice(0, 60);
+  return fallback;
+}
+
+export function countSkills(home: string): number {
+  return listSkillIndex(home, Number.MAX_SAFE_INTEGER).total;
+}
+
+export function skillExists(home: string, category: string, name: string): boolean {
+  return existsSync(join(home, "skills", category, name, "SKILL.md"));
 }
 
 export function readSkill(home: string, skillPath: string): string | null {

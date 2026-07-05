@@ -12,16 +12,19 @@ export class ProviderRouter {
   private cloud: Provider | null;
 
   constructor(private config: HarnessConfig) {
-    this.local = new OllamaProvider(config.ollamaBaseUrl, config.ollamaModel);
+    const timeout = config.inferenceTimeoutMs;
+    this.local = new OllamaProvider(config.ollamaBaseUrl, config.ollamaModel, timeout);
     this.llamaServer = new LlamaServerProvider(
       config.llamaServerUrl,
       config.llamaServerModel,
+      timeout,
     );
     this.cloud = config.openaiApiKey
       ? new CloudProvider(
           config.openaiBaseUrl,
           config.openaiModel,
           config.openaiApiKey,
+          timeout,
         )
       : null;
   }

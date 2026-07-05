@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { ToolDefinition } from "../../providers/types.js";
 
@@ -141,12 +141,6 @@ export const bashTool: Tool = {
 
 export const BUILTIN_TOOLS: Tool[] = [readTool, writeTool, editTool, bashTool];
 
-export function getToolMap(tools: Tool[] = BUILTIN_TOOLS): Map<string, Tool> {
+export function getToolMap(tools: Tool[]): Map<string, Tool> {
   return new Map(tools.map((t) => [t.definition.name, t]));
-}
-
-export function listSkillFiles(home: string): string[] {
-  const dir = join(home, "skills");
-  if (!existsSync(dir)) return [];
-  return [];
 }
