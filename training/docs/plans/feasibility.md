@@ -399,24 +399,24 @@ Prove Pi inference on a **30M toy model** before investing in full 124M pretrain
 
 ## Repo structure (greenfield — empty today)
 
-**Data acquisition subplan (raw Dolma v1_7, 100M slice):** [Data Acquisition](data-acquisition.md) — `train_100m_v17.txt` (25 shards, ~63 GB) → `data/dolma/raw/`. Tokenization later.
+**Data acquisition subplan (raw Dolma v1_7, 100M slice):** [Data Acquisition](data-acquisition.md) — `train_100m_v17.txt` (25 shards, ~63 GB) → `training/data/dolma/raw/`. Tokenization later.
 
 ```
 piLLM/
-  src/
-    model/           # attention, blocks, GPT (book)
-    tokenizer/
-    train/           # pretrain.py, lora.py, config.yaml
-    data/            # dolma_stream.py, tokenize.py, manifest
-    export/          # to_gguf.py, verify_parity.py
-  data/              # resume, writeups, rag artifacts
-  pi/
-    deploy.sh        # copy GGUF, systemd, llama.cpp build flags
-    llama-server.service
-  web/               # TypeScript + LangChain.js
-  notebooks/         # Colab-friendly 01_pretrain.ipynb
-  requirements.txt
-  README.md
+  training/
+    src/
+      model/         # attention, blocks, GPT (book)
+      tokenizer/
+      train/         # pretrain.py, lora.py, config.yaml
+      data/          # dolma_stream.py, tokenize.py
+      export/        # to_gguf.py, verify_parity.py
+    data/            # Dolma manifests + raw shards
+    scripts/
+    docs/
+  harness/
+    pi/              # llama-server, systemd
+    web/             # TypeScript + LangChain.js
+    eval/
 ```
 
 ---

@@ -1,6 +1,6 @@
-data/dolma/raw/
-data/.cache/
-data/download.log
+training/data/dolma/raw/
+training/data/.cache/
+training/data/download.log
 .DS_Store
 __pycache__/
 *.pyc

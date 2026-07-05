@@ -12,6 +12,7 @@ Raw Dolma v1.7 pretrain slice for a **~100M** parameter model.
 ## Download
 
 ```bash
+cd training   # or run from repo root with training/ prefix
 bash scripts/download_dolma.sh
 ```
 
