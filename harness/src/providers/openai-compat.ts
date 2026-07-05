@@ -1,3 +1,4 @@
+import { ProviderChatError } from "./errors.js";
 import type { ChatRequest, ChatResponse, Provider, ToolCall } from "./types.js";
 
 function parseToolCalls(raw: unknown): ToolCall[] {
@@ -60,19 +61,29 @@ export class OpenAiCompatProvider implements Provider {
       }));
     }
 
-    const res = await fetch(`${this.baseUrl.replace(/\/$/, "")}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...this.headers(),
-      },
-      body: JSON.stringify(body),
-      signal: AbortSignal.timeout(this.timeoutMs),
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${this.baseUrl.replace(/\/$/, "")}/chat/completions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...this.headers(),
+        },
+        body: JSON.stringify(body),
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new ProviderChatError(`${this.name} chat failed: ${message}`, undefined, this.name);
+    }
 
     if (!res.ok) {
       const text = await res.text();
-      throw new Error(`${this.name} chat failed (${res.status}): ${text.slice(0, 400)}`);
+      throw new ProviderChatError(
+        `${this.name} chat failed (${res.status}): ${text.slice(0, 400)}`,
+        res.status,
+        this.name,
+      );
     }
 
     const data = (await res.json()) as {
@@ -113,5 +124,11 @@ export class LlamaServerProvider extends OpenAiCompatProvider {
 export class CloudProvider extends OpenAiCompatProvider {
   constructor(baseUrl: string, model: string, apiKey: string, timeoutMs?: number) {
     super("cloud", baseUrl, model, apiKey, timeoutMs);
+  }
+}
+
+export class GeminiProvider extends OpenAiCompatProvider {
+  constructor(baseUrl: string, model: string, apiKey: string, timeoutMs?: number) {
+    super("gemini", baseUrl, model, apiKey, timeoutMs);
   }
 }

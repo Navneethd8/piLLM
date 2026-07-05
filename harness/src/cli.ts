@@ -4,6 +4,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { loadConfig } from "./config.js";
 import { ensureHome } from "./memory/files.js";
 import { AgentLoop } from "./agent/loop.js";
+import { ProviderRouter } from "./providers/router.js";
 import { startGateway } from "./gateway/runner.js";
 import { startWebServer } from "./web/server.js";
 import { globalQueue } from "./queue/single-flight.js";
@@ -12,9 +13,10 @@ async function cmdChat(): Promise<void> {
   const config = loadConfig();
   ensureHome(config.home);
   const agent = new AgentLoop(config);
+  const router = new ProviderRouter(config);
   const sessionId = agent.getSessionStore().getOrCreateSession("cli", "default", "CLI");
 
-  console.log(`piLLM harness — provider chain: local first (${config.ollamaModel})`);
+  console.log(`piLLM harness — provider: ${config.provider} (${router.describeChain()})`);
   console.log(`home: ${config.home}`);
   console.log("Type exit to quit.\n");
 
@@ -49,11 +51,20 @@ async function cmdGateway(): Promise<void> {
 
 async function cmdHealth(): Promise<void> {
   const config = loadConfig();
-  const res = await fetch(`${config.ollamaBaseUrl}/v1/models`).catch(() => null);
+  const router = new ProviderRouter(config);
+  const ollama = await fetch(`${config.ollamaBaseUrl}/v1/models`).catch(() => null);
   console.log(JSON.stringify({
     home: config.home,
-    ollama: res?.ok ?? false,
-    model: config.ollamaModel,
+    provider: config.provider,
+    chain: router.describeChain(),
+    ollama: ollama?.ok ?? false,
+    cloud: Boolean(config.openaiApiKey),
+    gemini: Boolean(config.geminiApiKey),
+    model: config.openaiApiKey
+      ? config.openaiModel
+      : config.geminiApiKey
+        ? config.geminiModel
+        : config.ollamaModel,
   }, null, 2));
 }
 

@@ -3,7 +3,13 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { config as loadDotenv } from "dotenv";
 
-export type ProviderKind = "ollama" | "llama-server" | "openai";
+export type ProviderKind =
+  | "cloud-first"
+  | "local-first"
+  | "ollama"
+  | "llama-server"
+  | "openai"
+  | "gemini";
 
 export interface HarnessConfig {
   home: string;
@@ -16,7 +22,9 @@ export interface HarnessConfig {
   openaiBaseUrl: string;
   openaiModel: string;
   openaiApiKey: string | undefined;
-  forceCloud: boolean;
+  geminiBaseUrl: string;
+  geminiModel: string;
+  geminiApiKey: string | undefined;
   webHost: string;
   webPort: number;
   maxIterations: number;
@@ -47,6 +55,28 @@ function envList(name: string): string[] {
   return raw.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
+function geminiApiKeyFromEnv(): string | undefined {
+  return process.env.GEMINI_API_KEY?.trim() || process.env.GOOGLE_API_KEY?.trim() || undefined;
+}
+
+function resolveProviderKind(): ProviderKind {
+  const raw = process.env.PILLM_PROVIDER?.trim().toLowerCase();
+  if (raw === "cloud-first" || raw === "cloud_first") return "cloud-first";
+  if (raw === "local-first" || raw === "local_first") return "local-first";
+  if (raw === "openai" || raw === "cloud") return "openai";
+  if (raw === "gemini" || raw === "google") return "gemini";
+  if (raw === "ollama" || raw === "local") return "ollama";
+  if (raw === "llama-server" || raw === "llama_server") return "llama-server";
+
+  if (process.env.PILLM_FORCE_CLOUD === "1") {
+    if (process.env.OPENAI_API_KEY?.trim()) return "openai";
+    if (geminiApiKeyFromEnv()) return "gemini";
+    return "openai";
+  }
+  if (process.env.OPENAI_API_KEY?.trim() || geminiApiKeyFromEnv()) return "cloud-first";
+  return "local-first";
+}
+
 export function loadConfig(): HarnessConfig {
   const home = process.env.PILLM_HOME ?? join(homedir(), ".pillm");
   const envPath = join(home, ".env");
@@ -59,7 +89,7 @@ export function loadConfig(): HarnessConfig {
     process.env.PILLM_WORKSPACE ??
     resolve(process.cwd());
 
-  const provider = (process.env.PILLM_PROVIDER ?? "ollama") as ProviderKind;
+  const provider = resolveProviderKind();
 
   return {
     home,
@@ -72,7 +102,11 @@ export function loadConfig(): HarnessConfig {
     openaiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",
     openaiModel: process.env.OPENAI_MODEL ?? "gpt-4o-mini",
     openaiApiKey: process.env.OPENAI_API_KEY,
-    forceCloud: process.env.PILLM_FORCE_CLOUD === "1",
+    geminiBaseUrl:
+      process.env.GEMINI_BASE_URL ??
+      "https://generativelanguage.googleapis.com/v1beta/openai/",
+    geminiModel: process.env.GEMINI_MODEL ?? "gemini-2.0-flash",
+    geminiApiKey: geminiApiKeyFromEnv(),
     webHost: process.env.PILLM_WEB_HOST ?? "127.0.0.1",
     webPort: envInt("PILLM_WEB_PORT", 8787),
     maxIterations: envInt("PILLM_MAX_ITERATIONS", 8),

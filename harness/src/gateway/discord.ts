@@ -103,6 +103,22 @@ async function resolveReplyChannel(
     return { channel: message.channel, sessionChannelId: message.channelId };
   }
 
+  if (message.hasThread) {
+    try {
+      const fetched = await message.fetch();
+      const existing = fetched.thread;
+      if (existing?.isSendable()) {
+        threadStore.add(existing.id);
+        return { channel: existing, sessionChannelId: existing.id };
+      }
+    } catch (err) {
+      console.warn(
+        "Discord existing thread fetch failed:",
+        err instanceof Error ? err.message : String(err),
+      );
+    }
+  }
+
   try {
     const thread = await message.startThread({
       name: threadNameFromPrompt(prompt),
@@ -119,13 +135,17 @@ async function resolveReplyChannel(
   }
 }
 
+function canInlineReply(channel: SendableChannels, replyTo?: Message): replyTo is Message {
+  return Boolean(replyTo && replyTo.channelId === channel.id);
+}
+
 async function sendReply(
   channel: SendableChannels,
   text: string,
   replyTo?: Message,
 ): Promise<void> {
   const chunks = chunkText(text);
-  if (replyTo) {
+  if (canInlineReply(channel, replyTo)) {
     await replyTo.reply({
       content: chunks[0],
       allowedMentions: { repliedUser: false },
@@ -218,7 +238,7 @@ async function processDiscordRequest(ctx: ProcessContext): Promise<void> {
     const errorText = `Error: ${msg.slice(0, 500)}`;
     await dismissThinking(thinking);
     try {
-      if (ctx.replyTo) {
+      if (canInlineReply(ctx.replyChannel, ctx.replyTo)) {
         await ctx.replyTo.reply({ content: errorText, allowedMentions: { repliedUser: false } });
       } else {
         await ctx.replyChannel.send(errorText);

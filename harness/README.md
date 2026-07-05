@@ -34,10 +34,13 @@ npm run gateway      # web :8787 + Discord (if token set)
 
 Copy [`pi/config.example.env`](pi/config.example.env) to `~/.pillm/.env`.
 
-- **Local default:** Ollama at `127.0.0.1:11434` (e.g. `qwen2.5:0.5b`)
-- **Cloud fallback:** set `OPENAI_API_KEY` and `PILLM_FORCE_CLOUD=1`
+- **Cloud-first default:** set `OPENAI_API_KEY` and/or `GEMINI_API_KEY` — tries cloud providers in order, falls back to Ollama on rate limits/errors
+- **Gemini only:** `PILLM_PROVIDER=gemini` with `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
+- **Local-only:** `PILLM_PROVIDER=ollama` (or omit cloud API keys)
 - **Discord:** set `DISCORD_BOT_TOKEN` + optional allowlists
+
+Cloud-first chain when both keys are set: OpenAI → Gemini → Ollama → llama-server (if running).
 
 ## Architecture
 
-CLI, web, and Discord are **peer surfaces** into one local agent on the Pi. Inference stays on-device by default.
+CLI, web, and Discord are **peer surfaces** into one agent. With cloud API keys set, inference uses cloud-first (OpenAI, then Gemini) and falls back to local Ollama on rate limits or errors.

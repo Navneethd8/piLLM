@@ -55,7 +55,6 @@ export class AgentLoop {
   }
 
   async runTurn(opts: RunTurnOptions): Promise<RunTurnResult> {
-    const provider = await this.router.resolve();
     const system = buildSystemPrompt(this.config, { platform: opts.platform });
     const history =
       opts.history ??
@@ -77,15 +76,17 @@ export class AgentLoop {
 
     let iterations = 0;
     let lastContent = "";
+    let lastProvider = "unknown";
 
     while (iterations < this.config.maxIterations) {
       iterations += 1;
 
-      const response = await provider.chat({
+      const response = await this.router.chat({
         messages,
         tools: this.agentTools.map((t) => t.definition),
         maxTokens: this.config.maxTokens,
       });
+      lastProvider = response.provider;
 
       if (response.toolCalls.length === 0) {
         lastContent = response.content?.trim() || "(empty response)";
@@ -124,7 +125,7 @@ export class AgentLoop {
         content: lastContent,
       });
     }
-    return { reply: lastContent, provider: provider.name, iterations };
+    return { reply: lastContent, provider: lastProvider, iterations };
   }
 
   private async dispatchTool(call: ToolCall): Promise<{ output: string; isError?: boolean }> {
