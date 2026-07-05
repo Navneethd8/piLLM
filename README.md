@@ -14,6 +14,7 @@ piLLM/
 
 - [x] Feasibility and architecture plan
 - [x] Dolma v1.7 data manifests and download scripts
+- [x] Edge harness (Ollama/llama-server, web API, Discord gateway)
 - [ ] Model implementation (book-style GPT)
 - [ ] Pretrain, export, Pi deployment
 - [ ] Resume bot (RAG + LangChain.js + LoRA)

@@ -1,0 +1,32 @@
+{
+  "name": "@pillm/harness",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Edge-first agent harness for Raspberry Pi — local Ollama/llama-server, Discord gateway, resume bot",
+  "bin": {
+    "pillm": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/cli.ts",
+    "start": "node dist/cli.js",
+    "cli": "tsx src/cli.ts chat",
+    "serve": "tsx src/cli.ts serve",
+    "gateway": "tsx src/cli.ts gateway"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.9.1",
+    "discord.js": "^14.18.0",
+    "dotenv": "^16.5.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^22.15.3",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}
