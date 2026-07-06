@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { ToolDefinition } from "../../providers/types.js";
@@ -45,6 +45,12 @@ export const readTool: Tool = {
     const path = safePath(ctx.workspace, String(args.path));
     if (!existsSync(path)) {
       return { output: `File not found: ${args.path}`, isError: true };
+    }
+    if (statSync(path).isDirectory()) {
+      return {
+        output: `Path is a directory, not a file: ${args.path}. Use bash to list contents (e.g. ls "${args.path}").`,
+        isError: true,
+      };
     }
     const content = readFileSync(path, "utf8");
     const max = 12_000;
@@ -94,6 +100,12 @@ export const editTool: Tool = {
     const path = safePath(ctx.workspace, String(args.path));
     if (!existsSync(path)) {
       return { output: `File not found: ${args.path}`, isError: true };
+    }
+    if (statSync(path).isDirectory()) {
+      return {
+        output: `Path is a directory, not a file: ${args.path}. Use bash to list contents (e.g. ls "${args.path}").`,
+        isError: true,
+      };
     }
     const oldText = String(args.old_text);
     const content = readFileSync(path, "utf8");

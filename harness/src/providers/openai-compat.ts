@@ -1,5 +1,22 @@
 import { ProviderChatError } from "./errors.js";
+import {
+  isOllamaFetchError,
+  unloadAllModels,
+  waitUntilUnloaded,
+} from "./ollama-utils.js";
 import type { ChatRequest, ChatResponse, Provider, ToolCall } from "./types.js";
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const OLLAMA_FETCH_RETRIES = 2;
+const OLLAMA_RETRY_COOLDOWN_MS = 2000;
+
+function isToolsUnsupportedError(err: unknown): boolean {
+  return (
+    err instanceof ProviderChatError &&
+    err.status === 400 &&
+    err.message.toLowerCase().includes("does not support tools")
+  );
+}
 
 function parseToolCalls(raw: unknown): ToolCall[] {
   if (!Array.isArray(raw)) return [];
@@ -110,8 +127,66 @@ export class OpenAiCompatProvider implements Provider {
 }
 
 export class OllamaProvider extends OpenAiCompatProvider {
+  private readonly ollamaBaseUrl: string;
+  private readonly modelName: string;
+  private toolsSupport: boolean | undefined;
+
   constructor(baseUrl: string, model: string, timeoutMs?: number) {
     super("ollama", `${baseUrl.replace(/\/$/, "")}/v1`, model, undefined, timeoutMs);
+    this.ollamaBaseUrl = baseUrl.replace(/\/$/, "");
+    this.modelName = model;
+  }
+
+  override async chat(request: ChatRequest): Promise<ChatResponse> {
+    let req = request;
+    if (request.tools?.length && !(await this.modelSupportsTools())) {
+      req = { ...request, tools: undefined };
+    }
+
+    let lastErr: unknown;
+    for (let attempt = 0; attempt <= OLLAMA_FETCH_RETRIES; attempt += 1) {
+      try {
+        return await super.chat(req);
+      } catch (err) {
+        if (request.tools?.length && isToolsUnsupportedError(err)) {
+          this.toolsSupport = false;
+          return await super.chat({ ...request, tools: undefined });
+        }
+
+        lastErr = err;
+        if (attempt < OLLAMA_FETCH_RETRIES && isOllamaFetchError(err)) {
+          await unloadAllModels(this.ollamaBaseUrl);
+          await sleep(OLLAMA_RETRY_COOLDOWN_MS);
+          await waitUntilUnloaded(this.ollamaBaseUrl, 15_000);
+          continue;
+        }
+        throw err;
+      }
+    }
+
+    throw lastErr;
+  }
+
+  private async modelSupportsTools(): Promise<boolean> {
+    if (this.toolsSupport !== undefined) return this.toolsSupport;
+    this.toolsSupport = await this.fetchToolsSupport();
+    return this.toolsSupport;
+  }
+
+  private async fetchToolsSupport(): Promise<boolean> {
+    try {
+      const res = await fetch(`${this.ollamaBaseUrl}/api/show`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: this.modelName }),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return true;
+      const data = (await res.json()) as { capabilities?: string[] };
+      return data.capabilities?.includes("tools") ?? true;
+    } catch {
+      return true;
+    }
   }
 }
 

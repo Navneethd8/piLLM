@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "Edge-first agent harness for Raspberry Pi — local Ollama/llama-server, Discord gateway, resume bot",
+  "description": "Edge-first agent harness for Raspberry Pi — local Ollama, Discord gateway, resume bot",
   "bin": {
     "pillm": "./dist/cli.js"
   },
@@ -13,7 +13,9 @@
     "start": "node dist/cli.js",
     "cli": "tsx src/cli.ts chat",
     "serve": "tsx src/cli.ts serve",
-    "gateway": "tsx src/cli.ts gateway"
+    "gateway": "tsx src/cli.ts gateway",
+    "benchmark": "tsx src/cli.ts benchmark",
+    "health": "tsx src/cli.ts health"
   },
   "engines": {
     "node": ">=18"

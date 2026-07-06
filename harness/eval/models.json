@@ -1,0 +1,9 @@
+{
+  "models": [
+    "smollm2:135m-instruct-q4_K_S",
+    "qwen2.5:0.5b"
+  ],
+  "standIn": "smollm2:135m-instruct-q4_K_S",
+  "productionFallback": "qwen2.5:0.5b",
+  "notes": "smollm2:135m-instruct-q4_K_S (~135M, Q4_K_S, 102MB) is the stand-in for future pillm-100m custom GGUF (~100-124M). qwen2.5:0.5b (494M) remains production fallback — benchmark winner on Pi 3B 1GB with num_ctx=512."
+}

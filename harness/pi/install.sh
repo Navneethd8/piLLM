@@ -53,6 +53,7 @@ fi
 echo ""
 echo "==> Done. Commands:"
 echo "    cd $REPO_DIR && npm run cli          # interactive"
+echo "    bash $REPO_DIR/pi/benchmark.sh       # find best local model"
 echo "    curl http://127.0.0.1:8787/health    # web health"
 echo "    systemctl --user start pillm-gateway # background (web + discord)"
 echo "    journalctl --user -u pillm-gateway -f"

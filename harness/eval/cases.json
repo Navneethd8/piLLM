@@ -1,0 +1,53 @@
+[
+  {
+    "id": "math-multiply",
+    "category": "reasoning",
+    "prompt": "What is 17 multiplied by 23? Reply with only the number.",
+    "checks": [{ "type": "contains", "value": "391" }],
+    "maxTokens": 32
+  },
+  {
+    "id": "logic-letters",
+    "category": "reasoning",
+    "prompt": "If all bloops are razzies and all razzies are lazzies, are all bloops definitely lazzies? Answer yes or no only.",
+    "checks": [{ "type": "regex", "pattern": "\\byes\\b", "ignoreCase": true }],
+    "maxTokens": 16
+  },
+  {
+    "id": "instruction-one-word",
+    "category": "instruction",
+    "prompt": "Reply with exactly one word and nothing else: banana",
+    "checks": [
+      { "type": "regex", "pattern": "^\\s*banana\\s*\\.?\\s*$", "ignoreCase": true }
+    ],
+    "maxTokens": 8
+  },
+  {
+    "id": "json-name",
+    "category": "structured",
+    "prompt": "Return valid JSON only with a single key \"name\" set to \"Alice\". No markdown, no explanation.",
+    "checks": [
+      { "type": "regex", "pattern": "\"name\"\\s*:\\s*\"Alice\"", "ignoreCase": true }
+    ],
+    "maxTokens": 64
+  },
+  {
+    "id": "summarize",
+    "category": "comprehension",
+    "prompt": "Summarize in one short sentence: The Raspberry Pi 3B has 1GB RAM and runs inference locally with quantized GGUF models via Ollama.",
+    "checks": [
+      { "type": "regex", "pattern": "(raspberry|pi|1gb|ram|ollama|gguf|quant|local|inference)", "ignoreCase": true }
+    ],
+    "maxTokens": 80
+  },
+  {
+    "id": "agent-greeting",
+    "category": "agent",
+    "prompt": "You are a helpful edge assistant on a Raspberry Pi. The user says: What can you help me with? Reply in 2 short sentences.",
+    "checks": [
+      { "type": "regex", "pattern": ".{20,}", "ignoreCase": true },
+      { "type": "not_contains", "value": "I cannot" }
+    ],
+    "maxTokens": 120
+  }
+]

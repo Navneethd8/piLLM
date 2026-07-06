@@ -8,6 +8,8 @@ import { ProviderRouter } from "./providers/router.js";
 import { startGateway } from "./gateway/runner.js";
 import { startWebServer } from "./web/server.js";
 import { globalQueue } from "./queue/single-flight.js";
+import { runBenchmark } from "./eval/benchmark.js";
+import { join } from "node:path";
 
 async function cmdChat(): Promise<void> {
   const config = loadConfig();
@@ -49,6 +51,32 @@ async function cmdGateway(): Promise<void> {
   await startGateway(config);
 }
 
+async function cmdBenchmark(): Promise<void> {
+  const config = loadConfig();
+  ensureHome(config.home);
+
+  const modelsArg = process.env.PILLM_BENCHMARK_MODELS;
+  const models = modelsArg
+    ? modelsArg.split(",").map((m) => m.trim()).filter(Boolean)
+    : undefined;
+
+  const outputPath =
+    process.env.PILLM_BENCHMARK_OUTPUT ??
+    join(config.home, "benchmarks", `${new Date().toISOString().replace(/[:.]/g, "-")}.json`);
+
+  await runBenchmark({
+    ollamaBaseUrl: config.ollamaBaseUrl,
+    models,
+    outputPath,
+    timeoutMs: config.inferenceTimeoutMs,
+    home: config.home,
+    numCtx: Number.parseInt(process.env.PILLM_BENCHMARK_NUM_CTX ?? "512", 10) || 512,
+    cooldownMs: Number.parseInt(process.env.PILLM_BENCHMARK_COOLDOWN_MS ?? "3000", 10) || 3000,
+    loadProbeMs:
+      Number.parseInt(process.env.PILLM_BENCHMARK_LOAD_PROBE_MS ?? "300000", 10) || 300_000,
+  });
+}
+
 async function cmdHealth(): Promise<void> {
   const config = loadConfig();
   const router = new ProviderRouter(config);
@@ -83,9 +111,12 @@ async function main(): Promise<void> {
     case "health":
       await cmdHealth();
       break;
+    case "benchmark":
+      await cmdBenchmark();
+      break;
     default:
       console.error(`Unknown command: ${cmd}`);
-      console.error("Usage: pillm [chat|serve|gateway|health]");
+      console.error("Usage: pillm [chat|serve|gateway|health|benchmark]");
       process.exit(1);
   }
 }

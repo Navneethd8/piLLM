@@ -1,4 +1,5 @@
 import type { HarnessConfig } from "../config.js";
+import { OllamaDualProvider } from "./ollama-dual.js";
 import {
   CloudProvider,
   GeminiProvider,
@@ -16,7 +17,14 @@ export class ProviderRouter {
 
   constructor(private config: HarnessConfig) {
     const timeout = config.inferenceTimeoutMs;
-    this.local = new OllamaProvider(config.ollamaBaseUrl, config.ollamaModel, timeout);
+    this.local = config.ollamaDualModel
+      ? new OllamaDualProvider(
+          config.ollamaBaseUrl,
+          config.ollamaChatModel,
+          config.ollamaToolModel,
+          timeout,
+        )
+      : new OllamaProvider(config.ollamaBaseUrl, config.ollamaModel, timeout);
     this.llamaServer = new LlamaServerProvider(
       config.llamaServerUrl,
       config.llamaServerModel,
@@ -51,7 +59,7 @@ export class ProviderRouter {
           ? `gemini (${this.config.geminiModel})`
           : "gemini (GEMINI_API_KEY not set)";
       case "ollama":
-        return `ollama (${this.config.ollamaModel})`;
+        return this.describeOllama();
       case "llama-server":
         return `llama-server (${this.config.llamaServerModel})`;
       case "cloud-first":
@@ -90,16 +98,23 @@ export class ProviderRouter {
     throw lastError ?? new Error("No inference provider available.");
   }
 
+  private describeOllama(): string {
+    if (this.config.ollamaDualModel) {
+      return `ollama dual (chat: ${this.config.ollamaChatModel}, tool: ${this.config.ollamaToolModel})`;
+    }
+    return `ollama (${this.config.ollamaModel})`;
+  }
+
   private describeCloudFirstChain(): string {
     const parts: string[] = [];
     if (this.cloud) parts.push(`cloud (${this.config.openaiModel})`);
     if (this.gemini) parts.push(`gemini (${this.config.geminiModel})`);
-    parts.push(`ollama (${this.config.ollamaModel})`);
+    parts.push(this.describeOllama());
     return parts.join(" → ");
   }
 
   private describeLocalFirstChain(): string {
-    const parts = [`ollama (${this.config.ollamaModel})`];
+    const parts = [this.describeOllama()];
     if (this.cloud) parts.push(`cloud (${this.config.openaiModel})`);
     if (this.gemini) parts.push(`gemini (${this.config.geminiModel})`);
     return parts.join(" → ");

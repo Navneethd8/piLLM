@@ -17,6 +17,9 @@ export interface HarnessConfig {
   provider: ProviderKind;
   ollamaBaseUrl: string;
   ollamaModel: string;
+  ollamaChatModel: string;
+  ollamaToolModel: string;
+  ollamaDualModel: boolean;
   llamaServerUrl: string;
   llamaServerModel: string;
   openaiBaseUrl: string;
@@ -97,6 +100,18 @@ export function loadConfig(): HarnessConfig {
     provider,
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
     ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5:0.5b",
+    ollamaChatModel:
+      process.env.OLLAMA_CHAT_MODEL?.trim() ||
+      process.env.OLLAMA_MODEL?.trim() ||
+      "qwen2.5:0.5b",
+    ollamaToolModel:
+      process.env.OLLAMA_TOOL_MODEL?.trim() ||
+      process.env.OLLAMA_MODEL?.trim() ||
+      "qwen2.5:0.5b",
+    ollamaDualModel:
+      process.env.PILLM_OLLAMA_DUAL === "1" ||
+      (!!process.env.OLLAMA_CHAT_MODEL?.trim() &&
+        !!process.env.OLLAMA_TOOL_MODEL?.trim()),
     llamaServerUrl: process.env.LLAMA_SERVER_URL ?? "http://127.0.0.1:8080/v1",
     llamaServerModel: process.env.LLAMA_SERVER_MODEL ?? "pillm-100m",
     openaiBaseUrl: process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1",

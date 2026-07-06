@@ -138,7 +138,12 @@ export class AgentLoop {
     if (!tool) {
       return { output: `Unknown tool: ${call.name}`, isError: true };
     }
-    return tool.run(call.arguments, { workspace: this.config.workspace });
+    try {
+      return await tool.run(call.arguments, { workspace: this.config.workspace });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      return { output: `Tool error (${call.name}): ${msg}`, isError: true };
+    }
   }
 
   getSessionStore(): SessionStore {
