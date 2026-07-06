@@ -1,6 +1,13 @@
 import { execFile } from "node:child_process";
-import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  realpathSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
+import { dirname, isAbsolute, relative, resolve } from "node:path";
 import { promisify } from "node:util";
 import type { ToolDefinition } from "../../providers/types.js";
 
@@ -8,6 +15,7 @@ const execFileAsync = promisify(execFile);
 
 export interface ToolContext {
   workspace: string;
+  sandboxRoot: string;
 }
 
 export interface ToolResult {
@@ -20,29 +28,53 @@ export interface Tool {
   run(args: Record<string, unknown>, ctx: ToolContext): Promise<ToolResult>;
 }
 
-function safePath(workspace: string, userPath: string): string {
-  const abs = resolve(workspace, userPath);
-  const ws = resolve(workspace);
-  if (!abs.startsWith(ws)) {
-    throw new Error(`Path escapes workspace: ${userPath}`);
+function assertInsideRoot(root: string, target: string): void {
+  const rel = relative(root, target);
+  if (rel.startsWith("..") || isAbsolute(rel)) {
+    throw new Error(`Path escapes sandbox: ${target}`);
   }
-  return abs;
+}
+
+function safePath(sandboxRoot: string, workspace: string, userPath: string): string {
+  const root = realpathSync(resolve(sandboxRoot));
+  const abs = isAbsolute(userPath) ? resolve(userPath) : resolve(workspace, userPath);
+
+  if (existsSync(abs)) {
+    const resolved = realpathSync(abs);
+    assertInsideRoot(root, resolved);
+    return resolved;
+  }
+
+  let check = abs;
+  while (!existsSync(check)) {
+    const parent = dirname(check);
+    if (parent === check) {
+      assertInsideRoot(root, abs);
+      return abs;
+    }
+    check = parent;
+  }
+
+  const resolvedPrefix = realpathSync(check);
+  const resolved = resolve(resolvedPrefix, abs.slice(check.length + 1));
+  assertInsideRoot(root, resolved);
+  return resolved;
 }
 
 export const readTool: Tool = {
   definition: {
     name: "read",
-    description: "Read a file from the workspace.",
+    description: "Read a file within the sandbox (user home by default).",
     parameters: {
       type: "object",
       properties: {
-        path: { type: "string", description: "Relative path within workspace" },
+        path: { type: "string", description: "Path relative to workspace or absolute within sandbox" },
       },
       required: ["path"],
     },
   },
   async run(args, ctx) {
-    const path = safePath(ctx.workspace, String(args.path));
+    const path = safePath(ctx.sandboxRoot, ctx.workspace, String(args.path));
     if (!existsSync(path)) {
       return { output: `File not found: ${args.path}`, isError: true };
     }
@@ -64,7 +96,7 @@ export const readTool: Tool = {
 export const writeTool: Tool = {
   definition: {
     name: "write",
-    description: "Write or overwrite a file in the workspace.",
+    description: "Write or overwrite a file within the sandbox (user home by default).",
     parameters: {
       type: "object",
       properties: {
@@ -75,7 +107,7 @@ export const writeTool: Tool = {
     },
   },
   async run(args, ctx) {
-    const path = safePath(ctx.workspace, String(args.path));
+    const path = safePath(ctx.sandboxRoot, ctx.workspace, String(args.path));
     mkdirSync(dirname(path), { recursive: true });
     writeFileSync(path, String(args.content), "utf8");
     return { output: `Wrote ${args.path}` };
@@ -85,7 +117,7 @@ export const writeTool: Tool = {
 export const editTool: Tool = {
   definition: {
     name: "edit",
-    description: "Replace one exact string in a file.",
+    description: "Replace one exact string in a file within the sandbox.",
     parameters: {
       type: "object",
       properties: {
@@ -97,7 +129,7 @@ export const editTool: Tool = {
     },
   },
   async run(args, ctx) {
-    const path = safePath(ctx.workspace, String(args.path));
+    const path = safePath(ctx.sandboxRoot, ctx.workspace, String(args.path));
     if (!existsSync(path)) {
       return { output: `File not found: ${args.path}`, isError: true };
     }

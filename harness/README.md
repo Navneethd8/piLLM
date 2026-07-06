@@ -77,6 +77,8 @@ npm run benchmark
 
 Copy [`pi/config.example.env`](pi/config.example.env) to `~/.pillm/.env`.
 
+- **`PILLM_WORKSPACE`** — agent working directory (bash cwd, base for relative file paths)
+- **`PILLM_SANDBOX_ROOT`** — boundary for read/write/edit tools (defaults to `$HOME`; symlink-safe)
 - **Cloud-first default:** set `OPENAI_API_KEY` and/or `GEMINI_API_KEY` — tries cloud providers in order, falls back to Ollama on rate limits/errors
 - **Gemini only:** `PILLM_PROVIDER=gemini` with `GEMINI_API_KEY` (or `GOOGLE_API_KEY`)
 - **Local-first (production):** `PILLM_PROVIDER=local-first` with `OLLAMA_MODEL=qwen2.5:0.5b`
@@ -84,6 +86,7 @@ Copy [`pi/config.example.env`](pi/config.example.env) to `~/.pillm/.env`.
 - **Local-only:** `PILLM_PROVIDER=ollama`
 - **USB model storage:** `OLLAMA_MODELS=/mnt/sda/ollama-models` (or run `pi/setup-ollama-usb.sh`)
 - **Discord:** set `DISCORD_BOT_TOKEN` + optional allowlists
+- **`PILLM_CONTEXT_TOKENS`** — Ollama `num_ctx` and agent history budget (default 2048; use 1024 on Pi 3B)
 
 Cloud-first chain when both keys are set: OpenAI → Gemini → Ollama.
 

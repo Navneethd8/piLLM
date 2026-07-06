@@ -28,6 +28,8 @@ export interface ChatRequest {
   messages: ChatMessage[];
   tools?: ToolDefinition[];
   maxTokens: number;
+  /** Ollama-only: sets options.num_ctx on the request. */
+  contextTokens?: number;
 }
 
 export interface ChatResponse {

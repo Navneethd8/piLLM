@@ -60,6 +60,8 @@ export class OpenAiCompatProvider implements Provider {
     }
   }
 
+  protected enrichBody(_body: Record<string, unknown>, _request: ChatRequest): void {}
+
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const body: Record<string, unknown> = {
       model: this.model,
@@ -77,6 +79,7 @@ export class OpenAiCompatProvider implements Provider {
         },
       }));
     }
+    this.enrichBody(body, request);
 
     let res: Response;
     try {
@@ -135,6 +138,12 @@ export class OllamaProvider extends OpenAiCompatProvider {
     super("ollama", `${baseUrl.replace(/\/$/, "")}/v1`, model, undefined, timeoutMs);
     this.ollamaBaseUrl = baseUrl.replace(/\/$/, "");
     this.modelName = model;
+  }
+
+  protected override enrichBody(body: Record<string, unknown>, request: ChatRequest): void {
+    if (request.contextTokens !== undefined && request.contextTokens > 0) {
+      body.options = { num_ctx: request.contextTokens };
+    }
   }
 
   override async chat(request: ChatRequest): Promise<ChatResponse> {

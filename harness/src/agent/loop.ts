@@ -1,5 +1,6 @@
 import type { HarnessConfig } from "../config.js";
 import { buildSystemPrompt } from "./prompt.js";
+import { truncateMessages } from "./truncate-messages.js";
 import { getAgentTools } from "./tools/registry.js";
 import { getToolMap } from "./tools/index.js";
 import { appendMemory } from "../memory/files.js";
@@ -81,10 +82,18 @@ export class AgentLoop {
     while (iterations < this.config.maxIterations) {
       iterations += 1;
 
-      const response = await this.router.chat({
-        messages,
-        tools: this.agentTools.map((t) => t.definition),
+      const toolDefs = this.agentTools.map((t) => t.definition);
+      const truncated = truncateMessages(messages, {
+        contextTokens: this.config.contextTokens,
         maxTokens: this.config.maxTokens,
+        tools: toolDefs,
+      });
+
+      const response = await this.router.chat({
+        messages: truncated,
+        tools: toolDefs,
+        maxTokens: this.config.maxTokens,
+        contextTokens: this.config.contextTokens,
       });
       lastProvider = response.provider;
 
@@ -139,7 +148,10 @@ export class AgentLoop {
       return { output: `Unknown tool: ${call.name}`, isError: true };
     }
     try {
-      return await tool.run(call.arguments, { workspace: this.config.workspace });
+      return await tool.run(call.arguments, {
+        workspace: this.config.workspace,
+        sandboxRoot: this.config.sandboxRoot,
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       return { output: `Tool error (${call.name}): ${msg}`, isError: true };

@@ -14,6 +14,7 @@ export type ProviderKind =
 export interface HarnessConfig {
   home: string;
   workspace: string;
+  sandboxRoot: string;
   provider: ProviderKind;
   ollamaBaseUrl: string;
   ollamaModel: string;
@@ -91,12 +92,16 @@ export function loadConfig(): HarnessConfig {
   const workspace =
     process.env.PILLM_WORKSPACE ??
     resolve(process.cwd());
+  const sandboxRoot =
+    process.env.PILLM_SANDBOX_ROOT?.trim() ||
+    homedir();
 
   const provider = resolveProviderKind();
 
   return {
     home,
     workspace,
+    sandboxRoot,
     provider,
     ollamaBaseUrl: process.env.OLLAMA_BASE_URL ?? "http://127.0.0.1:11434",
     ollamaModel: process.env.OLLAMA_MODEL ?? "qwen2.5:0.5b",

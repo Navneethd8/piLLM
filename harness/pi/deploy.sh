@@ -24,11 +24,25 @@ echo "==> Deploying harness to $PI_HOST:$PI_REPO"
 
 ssh "$PI_HOST" "mkdir -p $(dirname "$PI_REPO")"
 
+# Exclude macOS metadata (APFS AppleDouble, Finder junk) — not needed on Pi.
+RSYNC_MACOS_EXCLUDES=(
+  --exclude='._*'
+  --exclude='.DS_Store'
+  --exclude='.AppleDouble'
+  --exclude='.Spotlight-V100'
+  --exclude='.Trashes'
+  --exclude='.fseventsd'
+)
+
 rsync -avz --delete \
+  "${RSYNC_MACOS_EXCLUDES[@]}" \
   --exclude node_modules \
   --exclude dist \
   --exclude .env \
   "$REPO_DIR/" "$PI_HOST:$PI_REPO/"
+
+echo "==> Removing stray macOS metadata on Pi..."
+ssh "$PI_HOST" "find '$PI_REPO' \( -name '._*' -o -name '.DS_Store' -o -name '.AppleDouble' \) -delete 2>/dev/null || true"
 
 ssh "$PI_HOST" "cd '$PI_REPO' && bash pi/install.sh '$PI_REPO'"
 
